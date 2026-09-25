@@ -18,6 +18,7 @@ import zlib
 from renpy_reader import Archive, PyCode, Record, loads, rpyc_load, walk_objects
 from navigation import navigation_for, add_fragments
 from localization import translate_annotation
+from event_order import tracker_events, event_queues
 
 
 def script_sources(root):
@@ -125,10 +126,14 @@ def main():
         raise RuntimeError('This report reads the patched original-language script. Active translation language is %r; translation mapping must be added first.' % language)
 
     rows, identifiers, unsupported, duplicate_ids, manifests = [], set(), [], [], []
+    trackers = {}
     missing_say_names = 0
     for name, (origin, read) in sorted(sources.items()):
         raw = read()
         _, nodes = rpyc_load(raw)
+        # Read the game's gallery, not similarly named mod tracker screens.
+        if name == 'screens.rpyc':
+            trackers = tracker_events(nodes)
         navigation = navigation_for(nodes)
         objects = list(walk_objects(nodes))
         all_translates = {id(n) for n in objects if type(n).__name__ in ('Translate', 'TranslateSay') and getattr(n, 'language', None) is None}
@@ -192,6 +197,7 @@ def main():
                         item[direction] = None
                 unseen.append(item)
     fragments = add_fragments(unseen)
+    queues = event_queues(fragments, {r['id']: r['navigation'] for r in unseen}, trackers)
     game_rows = [r for r in rows if not r['mod']]
     stats = {
         'generated': datetime.datetime.now().astimezone().isoformat(),
@@ -210,6 +216,7 @@ def main():
         'unseen_but_statement_seen': sum(r['statement_seen'] for r in unseen),
         'blocks_without_say': missing_say_names,
         'fragments': len(fragments),
+        'gallery_queues': sum(q['kind'] == 'gallery' for q in queues),
         'fragments_other_branches': sum(not f['bonus_off'] for f in fragments),
         'visual_prepared_other_branches': sum(r['navigation']['visual_known'] and not r['bonus_off'] for r in unseen),
         'music_prepared_other_branches': sum(r['navigation']['music_known'] and not r['bonus_off'] for r in unseen),
@@ -223,6 +230,7 @@ def main():
     (args.output / 'manifest.json').write_text(json.dumps(manifests, ensure_ascii=False, indent=2), encoding='utf-8')
     (args.output / 'unseen.json').write_text(json.dumps(unseen, ensure_ascii=False), encoding='utf-8')
     navigation_data = {'version': 1, 'ui_language': args.ui_language, 'generated': stats['generated'], 'fragments': fragments,
+                       'queues': queues,
                        'entries': {r['id']: r['navigation'] for r in unseen}}
     (args.output / 'navigation.json').write_text(json.dumps(navigation_data, ensure_ascii=False), encoding='utf-8')
     write_tsv(args.output / 'labels.tsv', summaries, ['file', 'label', 'total', 'seen', 'unseen', 'status', 'label_seen', 'mod'])

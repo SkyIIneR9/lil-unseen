@@ -4,14 +4,15 @@ import hashlib
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 FILES = (
-    'README.md', 'README_RU.md', 'LICENSE', 'CONTRIBUTING.md', 'ROADMAP.md',
+    'README.md', 'README_EN.md', 'LICENSE', 'CONTRIBUTING.md', 'ROADMAP.md',
     '.gitignore', '.gitattributes', '.github/workflows/tests.yml',
     'game/0unseen_research.rpy',
     'research_unseen/export_unseen.py', 'research_unseen/renpy_reader.py',
     'research_unseen/navigation.py', 'research_unseen/unseen_runtime.py',
     'research_unseen/localization.py', 'research_unseen/viewer.html',
+    'research_unseen/event_order.py', 'research_unseen/test_event_order.py',
     'research_unseen/viewer_en.html', 'research_unseen/refresh_report.cmd',
     'research_unseen/test_reader.py', 'research_unseen/test_navigation.py',
     'research_unseen/test_export.py',

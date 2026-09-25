@@ -16,6 +16,10 @@ class Navigator:
         self.signature = None
         self.current = None
         self.last_errors = []
+        self.queue_mode = 'events'
+        self.queue_id = None
+        self._fragment_index = {}
+        self._cached_index = None
 
     def load(self):
         path = os.path.join(self.engine.config.basedir, 'research_unseen', 'output', 'navigation.json')
@@ -45,6 +49,42 @@ class Navigator:
 
     def text(self, key):
         return ui_text(key, (self.index or {}).get('ui_language', 'en'))
+
+    def ordered_fragments(self, index):
+        fragments = index['fragments']
+        if self._cached_index is not index:
+            self._fragment_index = {f['id']: f for f in fragments}
+            self._cached_index = index
+        if self.queue_mode == 'all' or not index.get('queues'):
+            return fragments, None
+        current = next((f['id'] for f in fragments if self.current in f['ids']), None)
+        candidates = [q for q in index['queues'] if current in q['fragments']]
+        queue = next((q for q in candidates if q['id'] == self.queue_id), None)
+        if queue is None:
+            queue = next(iter(candidates), None)
+        if queue is None:
+            return [], None
+        self.queue_id = queue['id']
+        return [self._fragment_index[i] for i in queue['fragments']], queue
+
+    def toggle_order(self):
+        self.queue_mode = 'all' if self.queue_mode == 'events' else 'events'
+        self.engine.restart_interaction()
+
+    def panel_status(self):
+        index = self.load()
+        fragments, queue = self.ordered_fragments(index)
+        visible = [f for f in fragments if not f['bonus_off']]
+        current = next((i for i, f in enumerate(visible) if self.current in f['ids']), None)
+        if current is None:
+            return self.text('select_fragment')
+        fragment = visible[current]
+        if queue:
+            name = queue['name']
+            prefix = self.text('gallery_order' if queue['kind'] == 'gallery' else 'file_order')
+        else:
+            name, prefix = '', self.text('all_order')
+        return '%s%s · %d/%d\n%s' % (prefix, name, current + 1, len(visible), fragment.get('label', ''))
 
     def filename_key(self, filename):
         # Script.finish_load rewrites archived node.filename from
@@ -128,6 +168,9 @@ class Navigator:
         finally:
             context.next_node = old_next
         self.current = identifier
+        if from_console:
+            self.queue_id = None
+        self.ordered_fragments(self.load())
         self.last_errors = errors
         renpy.show_screen('unseen_research_controls')
         warnings = []
@@ -147,7 +190,7 @@ class Navigator:
 
     def next(self, direction=1):
         index = self.load()
-        fragments = index['fragments']
+        fragments, queue = self.ordered_fragments(index)
         current = next((i for i, f in enumerate(fragments) if self.current in f['ids']), -1)
         positions = range(current + 1, len(fragments)) if direction >= 0 else range(current - 1, -1, -1)
         seen = self.engine.game.persistent._seen_translates
@@ -160,7 +203,7 @@ class Navigator:
                 pending = fragment['ids'][:1]
             if pending:
                 return self.jump(pending[0], from_console=False)
-        self.engine.notify(self.text('end'))
+        self.engine.notify(self.text('queue_end') if queue else self.text('end'))
 
 
 _navigator = None

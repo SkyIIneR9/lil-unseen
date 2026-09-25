@@ -1,6 +1,6 @@
 # LiL Unseen
 
-[Русский](README_RU.md) · English
+[Русский](README.md) · English
 
 Find dialogue you have not seen in **Lessons in Love**, including missed branches inside scenes you have already visited. Browse a local report, then optionally jump to a line in the game with background/music preparation and a **Next fragment** panel.
 
@@ -69,7 +69,11 @@ The in-game helper always reads `<game root>/research_unseen/output/navigation.j
 4. Use **Next fragment** in the game to continue through the report queue. **Previous** can revisit read fragments. **Hide** removes the panel; another prepared jump brings it back.
 5. After playing, quit normally and run the exporter again to refresh the report.
 
-The panel follows the complete report in file/label/line order, excluding explicit `bonus == False` fragments and skipping already read IDs using the live persistent state. **Browser filters do not control this queue.** The queue is not chronological story order.
+The default **Order: events** mode reads gaps within one label in source-line order, then follows the same character's in-game gallery order across files. It stops at the end of that queue; choose another event in the report. Shared events can belong to several galleries: navigation keeps the selected queue, while a fresh browser jump selects the first matching gallery (characters before main/secret).
+
+Labels absent from galleries use a separate source-file queue, explicitly marked **Unmapped events in file**. This does not establish character ownership. Click **Order: events** to toggle the previous full-list order. The panel shows the queue, fragment position and current label. Continue within a fragment using normal clicks; Next fragment moves to the next group of gaps.
+
+Both modes exclude explicit `bonus == False` branches and skip read fragments using live persistent state. **Browser filters do not control the queue.** Gallery order is not a guarantee of story chronology and does not select variables. After upgrading, fully restart the game and regenerate the report; old reports retain their previous order.
 
 **Exact jump** skips media preparation. **Scene start** jumps to the label; conditions inside that scene still apply. Neither option chooses story variables for you.
 
