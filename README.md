@@ -1,108 +1,90 @@
 # LiL Unseen
 
-[Русский](README_RU.md) · English
+Русский · [English](README.md)
 
-Find dialogue you have not seen in **Lessons in Love**, including missed branches inside scenes you have already visited. Browse a local report, then optionally jump to a line in the game with background/music preparation and a **Next fragment** panel.
+Инструмент для поиска **непрочитанных реплик в Lessons in Love**, включая пропущенные развилки внутри уже посещённых сцен. Позволяет изучать локальный отчёт, переходить к репликам, а затем пользоваться кнопкой **«Следующий фрагмент»** прямо в игре.
 
-An unofficial fan research tool. The repository contains only the tool and synthetic test data. You need your own game installation; no game scripts, dialogue, images, saves, or URM code are distributed here. URM is not required.
+Нужна собственная установленная игра; сценарии, реплики, изображения, сохранения и код URM не распространяются. Сам URM для работы не требуется.
 
-## What it does
+## Возможности
 
-- Compares compiled dialogue IDs with Ren’Py's accumulated `persistent` read history.
-- Groups consecutive unread dialogue into fragments; search by text, speaker, label, ID, or surrounding condition.
-- Filters partially read scenes, visited labels, files, and explicit `bonus == False` branches.
-- Copies console commands for prepared jumps, exact jumps, or scene starts.
-- Provides Previous / Next fragment / Hide buttons inside the game.
-- Exports local HTML, JSON and TSV. No server, network connection, account, or Python packages are needed to use the tool.
-- Offers English and Russian report interfaces and panel labels. Game dialogue stays in the language of your installed scripts.
+- Сопоставление ID диалогов с накопленной историей чтения в `persistent`.
+- Объединение соседних непрочитанных реплик в фрагменты, поиск по тексту, персонажу, лейблу, ID и условиям.
+- Фильтры частично прочитанных сцен, посещённых лейблов, файлов и явных веток `bonus == False` (патреон-версии).
+- Копирование команд перехода: с подготовкой кадра, точно к реплике или к началу сцены.
+- Кнопки «Назад», «Следующий фрагмент», «Скрыть» внутри игры.
+- Локальные HTML, JSON и TSV без сервера, сетевого подключения, аккаунта и дополнительных пакетов.
+- Русский и английский интерфейсы отчёта и игровой панели. Текст новеллы остаётся на языке установленных сценариев.
 
-## Compatibility
+## Установка
 
-Tested on Windows with **Ren’Py 8.2.3** and one Russian Lessons in Love installation whose folder says 0.60.0 but whose scripts declare 0.61.0. The original English edition, other releases, other mods, macOS and Linux have not been validated. This is an experimental first release, not a universal Ren’Py mod.
+1. Скачай ZIP репозитория через **Code → Download ZIP** и распакуй.
+   <img width="946" height="702" alt="Screenshot_16" src="https://github.com/user-attachments/assets/20d7941a-e174-4c61-9d57-bedd8120cb60" />
 
-The exporter needs **Python 3.10+** on your computer. The in-game helper uses the Python bundled with the game. Node.js is only needed by contributors running the viewer tests.
+3. Закрой игру. Скопируй папки **`game`** и **`research_unseen`** из архива в корень игры, рядом с её `.exe`. Объедини папки.
+4. Один раз запусти игру и нормально выйди.
+5. Запусти `research_unseen/refresh_report.cmd`, выбери **R** для русского или **E** для английского и дождись открытия отчёта.
+<img width="657" height="378" alt="Screenshot_13" src="https://github.com/user-attachments/assets/8833f339-bebc-4548-ba74-c5378e51339c" />
 
-The exporter reads RPA 2/3 archives and loose compiled scripts; loose files take precedence. Separately selected Ren’Py translations are currently unsupported: a non-`None` language in persistent produces an explicit error. Russian text patched directly into base scripts works in the tested build.
 
-## Installation
+Должна получиться такая структура:
 
-1. Download the repository ZIP (**Code → Download ZIP**) and extract it.
-2. Close the game. Copy the included **`game`** and **`research_unseen`** folders into your game root, beside the game executable. Merge the directories; the helper adds its own file.
-3. Start the game once to compile the helper, then quit normally. The optional helper enables the Ren’Py console.
-4. Run `research_unseen/refresh_report.cmd`, choose **E** for English or **R** for Russian, and wait for the report to open.
-
-Expected layout:
 
 ```text
 LessonsInLove/
   LessonsInLove….exe
   game/
     0unseen_research.rpy
-    ...your existing game files...
+    ...остальные файлы игры...
   research_unseen/
     export_unseen.py
     refresh_report.cmd
-    ...tool files...
+    ...файлы инструмента...
 ```
 
-For **report-only** use, omit `game/0unseen_research.rpy`. You can read the report without installing an in-game mod.
+Если нужен **только отчёт**, файл `game/0unseen_research.rpy` можно не устанавливать. Для чтения HTML мод внутри игры не нужен.
 
-Manual export, from the game root:
+Ручной экспорт из корня игры:
 
 ```powershell
-python research_unseen/export_unseen.py --ui-language en
+python research_unseen/export_unseen.py --ui-language ru
 ```
 
-For a custom game location or persistent backup:
+Можно указать другую папку игры или резервную копию persistent:
 
 ```powershell
-python research_unseen/export_unseen.py --root "D:\Games\LessonsInLove" --persistent "D:\Backups\persistent" --ui-language en
+python research_unseen/export_unseen.py --root "D:\Games\LessonsInLove" --persistent "D:\Backups\persistent" --ui-language ru
 ```
 
-The in-game helper always reads `<game root>/research_unseen/output/navigation.json`. If running the exporter from an external checkout, also pass `--output` pointing to that directory. A custom output elsewhere is suitable for report-only use.
+Игровой помощник всегда читает `<корень игры>/research_unseen/output/navigation.json`. Если запускаешь экспортёр из отдельной папки проекта, добавь `--output` с этим путём. Отчёт в произвольной другой папке подходит для чтения без игровой навигации.
 
-## Reading and jumping
+## Как пользоваться
 
-1. Open `research_unseen/output/unseen.html` in a browser. It contains spoilers. Reading the HTML does not change game progress.
-2. Load an **experimental save slot** in the game and stop during normal dialogue.
-3. On a report card, click **Prepare scene & jump**, open the game console with **Shift+O** (letter O), paste the command and press Enter. If automatic copying fails, the command is selected for Ctrl+C.
-4. Use **Next fragment** in the game to continue through the report queue. **Previous** can revisit read fragments. **Hide** removes the panel; another prepared jump brings it back.
-5. After playing, quit normally and run the exporter again to refresh the report.
+1. Открой `research_unseen/output/unseen.html` в браузере. Чтение страницы не меняет прогресс игры.
+   <img width="1894" height="924" alt="Screenshot_14" src="https://github.com/user-attachments/assets/63bb8b7d-d44b-4823-8d5a-4c1c65ed4502" />
 
-The panel follows the complete report in file/label/line order, excluding explicit `bonus == False` fragments and skipping already read IDs using the live persistent state. **Browser filters do not control this queue.** The queue is not chronological story order.
+3. В игре загрузи **отдельный исследовательский сейв** и остановись на обычной реплике.
+4. На сайте нажми **«С подготовкой кадра»**, открой консоль через **Shift+O** (латинская O), вставь команду и нажми Enter. Если автоматическое копирование недоступно, команда выделится для Ctrl+C.
+5. В игре пользуйся кнопкой **«Следующий фрагмент»**. «Назад» позволяет повторно открыть прочитанные фрагменты. «Скрыть» убирает панель; следующий подготовленный переход вернёт её.
+   <img width="1815" height="1022" alt="Screenshot_15" src="https://github.com/user-attachments/assets/f8e62b98-3961-4f50-bf14-955428cd3556" />
 
-**Exact jump** skips media preparation. **Scene start** jumps to the label; conditions inside that scene still apply. Neither option chooses story variables for you.
+7. После исследования нормально закрой игру и снова запусти экспортёр.
 
-## What a jump can and cannot restore
+Панель идёт по всему отчёту в порядке файл/лейбл/строка, исключает явные ветки `bonus == False` и пропускает уже прочитанные ID по живому persistent. **Фильтры в браузере не управляют этой очередью.** Это не хронологический порядок событий.
 
-Prepared jumps replay identifiable `scene`, `show`, `hide`, and music commands. Music restarts from the beginning. Old sound effects and voices stop. If the background is unknown, the master layer is cleared; unknown music becomes silence. Dynamic images still depend on your current save variables. Cameras, custom screens, and other layers may retain state.
+**«Точный переход»** не подготавливает оформление. **«К лейблу»** начинает сцену с её обычными проверками. Эти варианты не подбирают сюжетные переменные автоматически.
 
-Preparation does not execute preceding story assignments or solve conditions. **After landing, ordinary game code runs normally**, including relationship changes and other consequences. Direct jumps can also display diagnostic or unreachable dialogue. Use a separate save for exploration; loading it later does not undo persistent read marks accumulated during exploration.
+## Что восстанавливается при переходе
 
-An unread ID means “not marked as executed by this persistent”, not proof that the player never read it, or that the branch is naturally reachable. Old versions, mods and lost persistent history can affect results. The tool does not load or merge every save slot. Surrounding conditions are clues, not a complete route walkthrough.
+Подготовка воспроизводит определимые команды `scene`, `show`, `hide` и музыки. Музыка начинается заново, старые звуковые эффекты прекращаются. Если фон неизвестен, основной слой очищается; неизвестная музыка заменяется тишиной. Динамические изображения используют переменные текущего сейва. Камеры, пользовательские экраны и другие слои могут сохранить старое состояние.
 
-## Troubleshooting
+Подготовка не выполняет предшествующие сюжетные присваивания и не решает условия. **После перехода обычный код игры продолжает выполняться**, включая изменения отношений и другие последствия. Прямой переход может показать служебную или недостижимую реплику. Используй отдельный сейв; его последующая загрузка не отменит накопленные отметки прочитанного в persistent.
 
-| Symptom | What to do |
-| --- | --- |
-| Python is missing / Microsoft Store opens | Install Python 3.10+ and enable its PATH option, then reopen the launcher. |
-| Source is newer than compiled data | Start the game, quit normally, rerun the exporter. |
-| No persistent found | Play and quit once, or pass `--persistent` explicitly. Windows AppData and local game saves are checked automatically. |
-| `NameError: unseen_research_jump` | Check both tool folders are installed, then fully restart the game. |
-| Navigation report mismatch | Close the game and regenerate the report from the same installation. Compiled archive filename rewrites are already handled. |
-| Shift+O does not open the console | Verify the helper compiled and restart. Another mod may override console configuration. |
-| Wrong/blank image, missing music | Some context cannot be reconstructed. Try Scene start or a save closer to the scene. |
-| Incomplete/ambiguous extraction or unsupported language | That build is not supported yet; report the error and version, without uploading game scripts or saves. |
+Непрочитанный ID означает отсутствие отметки исполнения в этом persistent, а не доказательство того, что игрок никогда не видел текст или что ветка достижима обычным путём. Версии, моды и потеря persistent влияют на результат. Инструмент не загружает и не объединяет все слоты сохранений. Условия в карточке — подсказка для исследования, а не полный маршрут прохождения.
 
-To uninstall the helper, close the game and remove **both** `game/0unseen_research.rpy` and `game/0unseen_research.rpyc`. Then the tool directory may be removed too. Do not remove either directory wholesale if it contains your other files.
+Для удаления помощника закрой игру и удали **оба** файла `game/0unseen_research.rpy` и `game/0unseen_research.rpyc`. Затем можно удалить папку инструмента. Не удаляй папки целиком, если в них находятся другие нужные файлы.
 
-## Privacy and distribution
-
-Generated reports contain game dialogue, spoilers, your read history and local paths. Keep `research_unseen/output/` private. Do not publish generated reports, saves, persistent files, archives, decompiled scripts or extracted URM code. The supplied `.gitignore` excludes these artifacts; the release packer includes only an explicit list of tool files.
-
-Offline parsing replaces supported Ren’Py pickle globals with inert records instead of importing the engine or executing embedded game Python. This is not a sandbox for arbitrary hostile files. Use data from your own trusted installation.
-
-## Development
+## Разработка
 
 ```powershell
 python -m unittest discover -s research_unseen -p "test_*.py"
@@ -110,6 +92,6 @@ node tests/verify_viewer.cjs
 python tools/build_release.py
 ```
 
-Tests use invented fixtures and need no game assets. CI runs them on Windows and Linux. Engine integration was also checked locally with Ren’Py 8.2.3; that result does not validate every scene. The release archive is written under `dist/`.
+Тесты используют выдуманные данные и не требуют файлов игры. CI запускает их на Windows и Linux. Интеграция с Ren’Py 8.2.3 также проверена локально; это не означает проверку каждой сцены. Архив для распространения создаётся в `dist/`.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for bug reports and [ROADMAP.md](ROADMAP.md) for planned improvements. The tool code is under the [MIT license](LICENSE); the game and its assets are not covered by it.
+Правила сообщений об ошибках — в [CONTRIBUTING.md](CONTRIBUTING.md), планы — в [ROADMAP.md](ROADMAP.md). Код инструмента распространяется под [лицензией MIT](LICENSE); она не относится к игре и её материалам.
