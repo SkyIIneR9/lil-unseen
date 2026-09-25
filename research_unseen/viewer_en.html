@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lessons in Love — Unseen dialogue</title>
+<style>
+:root{color-scheme:dark;font:16px/1.55 system-ui,sans-serif;background:#11151c;color:#e4eaf1}body{max-width:1120px;margin:auto;padding:32px 24px}h1{font-size:30px;margin:0 0 12px}p{color:#aebdcd}strong{color:#e4eaf1}.controls{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}input,select,button{font:inherit;background:#202b38;color:#e4eaf1;border:1px solid #415267;border-radius:8px;padding:10px}input[type=search]{flex:1;min-width:220px}button{cursor:pointer}button:disabled{opacity:.4;cursor:default}.primary{background:#254a63;border-color:#5d9bc3}article{background:#19212b;border:1px solid #303e50;border-radius:12px;padding:20px;margin:16px 0}h2{font-size:18px;color:#8fc8ff;margin:0 0 10px;overflow-wrap:anywhere}.text{white-space:pre-wrap;overflow-wrap:anywhere}.meta{font:13px/1.6 ui-monospace,monospace;color:#a5b6c8;overflow-wrap:anywhere}.guard{white-space:pre-wrap;background:#111923;padding:12px;border-left:3px solid #d5b26a;margin:14px 0}summary{cursor:pointer;color:#a8c7e9}.context,.fragment-line{padding:12px;margin-top:8px;border-left:2px solid #536171}.badge{display:inline-block;font-size:12px;border:1px solid #526780;padding:3px 7px;border-radius:5px;margin:3px 5px 3px 0}nav{display:flex;align-items:center;gap:18px;margin:20px 0}.hint{font-size:14px}#counter,.copy-status{color:#9bd5b5}.jump-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.command{box-sizing:border-box;width:100%;min-height:72px;background:#101720;color:#c2dbf5;border:1px solid #415267;border-radius:8px;padding:10px;font:13px/1.5 ui-monospace,monospace;resize:vertical}.guide{padding:16px;background:#19212b;border-radius:10px;margin:18px 0}.guide p{margin:10px 0}.copy-status{font-size:14px}details{margin-top:12px}.checks{display:flex;gap:24px;flex-wrap:wrap}a{color:#8fc8ff}
+</style>
+<h1>Unseen dialogue</h1>
+<p id="stats"></p>
+<p class="hint">A local Ren’Py snapshot. Contains spoilers. Reading does not change game progress.</p>
+<details class="guide"><summary>How to use</summary>
+<p>Install the helper and restart the game. Load a separate experimental save and pause during normal dialogue.</p>
+<p>Consecutive unread dialogue in one straight branch is grouped into fragments. Read dialogue and branching boundaries split fragments. Jump once, then continue with normal clicks.</p>
+<p>Click Prepare scene &amp; jump, open the game console with Shift+O (letter O), paste and press Enter. If clipboard access fails, use Ctrl+C on the selected command.</p>
+<p>The in-game Next fragment panel follows the entire report, excluding bonus == False branches, and skips read IDs using live persistent state. Browser filters do not affect this queue. Previous can revisit read fragments. Hide removes the panel; another prepared jump brings it back.</p>
+<p>Preparation does not execute preceding story assignments or choose variables. Music restarts; old sound effects stop. Unknown backgrounds become blank; unknown music becomes silence. Cameras and custom screens may retain state. After landing, normal game code and its consequences run.</p>
+<p>Search returns whole fragments. Conditions show surrounding checks, not a complete route. Scene start runs the label with its normal checks; Exact jump skips media preparation.</p>
+<p>Dialogue shown in the game is marked read. Quit normally and run refresh_report.cmd to refresh. If unseen_research_jump raises NameError, check installation and restart the game.</p>
+</details>
+<div class="controls">
+<input id="search" type="search" aria-label="Search" placeholder="Text, speaker, label or condition…">
+<select id="view" aria-label="Report view"><option value="fragments">Fragments</option><option value="lines">Individual dialogue</option></select>
+<select id="scope" aria-label="Scene coverage"><option value="partial">Partially read scenes</option><option value="visited">All visited labels</option><option value="unseen">Scenes with no read dialogue</option><option value="all">All unread dialogue</option></select>
+<select id="file" aria-label="File"><option value="">All script files</option></select>
+</div>
+<div class="checks"><label><input id="hideBonusOff" type="checkbox" checked> Hide bonus == False branches</label><label><input id="mods" type="checkbox"> Include mods</label></div>
+<p id="counter" role="status"></p>
+<nav><button id="prev">← Previous</button><span id="page"></span><button id="next">Next →</button></nav>
+<main id="results"></main>
+<script id="data" type="application/json">__REPORT_DATA__</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('data').textContent), $=id=>document.getElementById(id), size=30;
+let page=0, filtered=[];
+const fmt=n=>n.toLocaleString('en-US');
+$('stats').textContent=`Script version ${data.stats.script_version} · Read ${fmt(data.stats.game_seen)} of ${fmt(data.stats.game_blocks)} blocks · Unmarked: ${fmt(data.stats.game_unseen)} · Excluding bonus == False: ${fmt(data.stats.unseen_other_branches)}`;
+for(const file of [...new Set(data.rows.map(r=>r.file))].sort()){
+  const option=document.createElement('option');option.value=file;option.textContent=file;$('file').append(option);
+}
+function el(tag,text,cls){const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e}
+function jumpCommand(row,mode='prepared'){
+  if(mode==='prepared')return `unseen_research_jump(${JSON.stringify(row.id)})`;
+  const target=mode==='label'?JSON.stringify(row.label):`renpy.game.script.translator.default_translates[${JSON.stringify(row.id)}].name`;
+  return `assert _console.console.can_renpy(), "Open console during normal dialogue"; _unseen_target = ${target}; renpy.game.script.lookup(_unseen_target); renpy.pop_call(); renpy.jump(_unseen_target)`;
+}
+function jumpPanel(row){
+  const box=el('div',''),actions=el('div','','jump-actions'),command=el('textarea','','command'),status=el('div','','copy-status');
+  command.readOnly=true;command.value=jumpCommand(row);command.setAttribute('aria-label','Ren’Py console command');status.setAttribute('role','status');
+  async function copy(mode){
+    command.value=jumpCommand(row,mode);
+    try{
+      if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(command.value);
+      status.textContent='Copied. In game: Shift+O → Ctrl+V → Enter.';
+    }catch(error){command.focus();command.select();status.textContent='Command selected: Ctrl+C → paste in the game console.'}
+  }
+  for(const [mode,title] of [['prepared','Prepare scene & jump'],['line','Exact jump'],['label','Scene start']]){
+    const button=el('button',title,mode==='prepared'?'primary':'');button.disabled=mode==='label'&&!row.label;button.onclick=()=>copy(mode);actions.append(button);
+  }
+  box.append(actions,command,status);
+  return box;
+}
+function mediaInfo(row){
+  const n=row.navigation,box=el('div','');
+  if(!n){box.append(el('p','Refresh the report to prepare scene media.','hint'));return box}
+  box.append(el('span',n.visual_known?'Background identified':'Unknown background → blank frame','badge'));
+  box.append(el('span',n.music_known?'Music/silence identified':'Unknown music → silence','badge'));
+  if(n.notes.length)box.append(el('p',n.notes.join(' '),'hint'));
+  return box;
+}
+function contextPanel(first,last){
+  const details=el('details','');details.append(el('summary','Neighboring dialogue outside this fragment'));
+  for(const [n,title] of [[first.before,'Before'],[last.after,'After']])if(n){
+    const box=el('div','','context');box.append(el('div',`${title} · line ${n.line} · ${n.seen?'read':'unread'}`,'meta'));
+    if(n.conditions)box.append(el('div',n.conditions,'meta text'));
+    box.append(el('strong',n.speaker),el('div',n.text,'text'));details.append(box);
+  }
+  return details;
+}
+function filter(){
+  const query=$('search').value.toLocaleLowerCase(),scope=$('scope').value,file=$('file').value,mods=$('mods').checked,hideBonus=$('hideBonusOff').checked;
+  const eligible=data.rows.filter(r=>(mods||!r.mod)&&(!hideBonus||!r.bonus_off)&&(!file||r.file===file)&&(scope==='all'||scope==='visited'&&r.label_seen||r.status===scope));
+  const groups=new Map();
+  for(const row of eligible){
+    const key=$('view').value==='lines'?row.id:(row.fragment_id||row.id);
+    if(!groups.has(key))groups.set(key,{id:key,rows:[]});
+    groups.get(key).rows.push(row);
+  }
+  filtered=[...groups.values()].filter(group=>!query||group.rows.some(r=>[r.text,r.speaker,r.label,r.conditions,r.id].some(v=>v.toLocaleLowerCase().includes(query))));
+  page=0;render();
+}
+function render(){
+  const pages=Math.max(1,Math.ceil(filtered.length/size)),lines=filtered.reduce((n,g)=>n+g.rows.length,0);
+  $('counter').textContent=`${$('view').value==='lines'?'Dialogue cards':'Fragments'}: ${fmt(filtered.length)} · Dialogue blocks in results: ${fmt(lines)}`;
+  $('page').textContent=`${page+1} / ${pages}`;$('prev').disabled=page===0;$('next').disabled=page+1>=pages;
+  const out=$('results');out.replaceChildren();
+  for(const group of filtered.slice(page*size,(page+1)*size)){
+    const first=group.rows[0],last=group.rows.at(-1),article=el('article','');
+    article.append(el('h2',`${first.label||'(no label)'} · ${group.rows.length} blocks`));
+    article.append(el('div',`${first.file}:${first.line}${first!==last?'–'+last.line:''}`,'meta'));
+    article.append(el('span',first.label_seen?'Label visited':'Label not marked visited','badge'));
+    if(first.conditions)article.append(el('div',first.conditions,'guard'));
+    article.append(mediaInfo(first),jumpPanel(first));
+    if(group.rows.length===1){article.append(el('strong',first.speaker),el('div',first.text,'text'),el('div',first.id,'meta'))}
+    else{
+      article.append(el('strong',first.speaker),el('div',first.text,'text'));
+      const details=el('details','');details.append(el('summary',`Fragment text: ${group.rows.length} blocks`));
+      for(const row of group.rows){
+        const line=el('div','','fragment-line');line.append(el('div',`Line ${row.line} · ${row.id}`,'meta'),el('strong',row.speaker),el('div',row.text,'text'));
+        const advanced=el('details','');advanced.append(el('summary','Jump to this specific dialogue'),mediaInfo(row),jumpPanel(row));line.append(advanced);details.append(line);
+      }
+      article.append(details);
+    }
+    article.append(contextPanel(first,last));out.append(article);
+  }
+}
+let timer;
+$('search').addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(filter,150)});
+for(const id of ['scope','file','mods','hideBonusOff','view'])$(id).addEventListener('change',filter);
+$('prev').onclick=()=>{page--;render();window.scrollTo(0,0)};
+$('next').onclick=()=>{page++;render();window.scrollTo(0,0)};
+filter();
+</script>
+</html>
